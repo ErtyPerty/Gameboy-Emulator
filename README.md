@@ -5,7 +5,7 @@ https://github.com/retrio/gb-test-roms/tree/master
 Meganesu's GB op-codes. Used to reference each gameboy op code, their functionality and index
 https://meganesu.github.io/generate-gb-opcodes/
 
-Pan docs. Very helpful for getting MBC's to work
+Pan docs. Very helpful for getting MBC's to work                   
 https://gbdev.io/pandocs/About.html
 
 Gameboy community technical manual. Very helpful for understanding gameboy architecture and system functionality
