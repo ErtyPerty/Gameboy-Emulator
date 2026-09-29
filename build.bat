@@ -47,6 +47,10 @@ g++ ^
     -g ^
     "src\main.cpp" ^
     "src\cart.cpp" ^
+    "src\cpu.cpp" ^
+    "src\cpu_instructions.cpp" ^
+    "src\emulator_core.cpp" ^
+    "src\memory_bus.cpp" ^
     -I"include" ^
     -I"%MSYS2%\ucrt64\include" ^
     -L"%MSYS2%\ucrt64\lib" ^
