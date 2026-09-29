@@ -43,6 +43,8 @@ echo Building emulator
 echo ========================================
 echo.
 
+:: ADD ANY NEW .CPP FILES TO THE G++ INCLUDE BATCH OR THE EMULATOR WILL NOT BUILD CORRECTLY WHEN PACKAGED
+
 g++ ^
     -g ^
     "src\main.cpp" ^
@@ -51,7 +53,23 @@ g++ ^
     "src\cpu_instructions.cpp" ^
     "src\emulator_core.cpp" ^
     "src\memory_bus.cpp" ^
+    "src\timer.cpp" ^
+    "src\interrupts.cpp" ^
+    "src\debug_log.cpp" ^
+    "src\serial_test.cpp" ^
+    "src\MBC\no_mbc.cpp" ^
+    "src\MBC\mbc1.cpp" ^
+    "src\MBC\mbc2.cpp" ^
+    "src\MBC\mbc3.cpp" ^
+    "src\MBC\mbc5.cpp" ^
+    "src\MBC\mbc6.cpp" ^
+    "src\MBC\mbc7.cpp" ^
+    "src\MBC\huc1.cpp" ^
+    "src\MBC\huc3.cpp" ^
+    "src\MBC\mmm01.cpp" ^
+    "src\MBC\m161.cpp" ^
     -I"include" ^
+    -I"include\MBC" ^
     -I"%MSYS2%\ucrt64\include" ^
     -L"%MSYS2%\ucrt64\lib" ^
     -lSDL3 ^

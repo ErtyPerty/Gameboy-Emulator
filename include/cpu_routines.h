@@ -1,410 +1,422 @@
 #pragma once
 
-#include "cpu.h"
-#include "memory_bus.h"
-#include "emulator_core.h"
-
-static inline void cpu_routine_ld_8(uint8_t &reg){
-    core_advance_cpu_clocks(4);
-    reg = memory_bus_read(cpu_registers.pc++);
-    core_advance_cpu_clocks(4);
+#define cpu_routine_ld_8(reg8)						\
+{													\
+	core_advance_cpu_clocks(4);						\
+	reg8 = memory_bus_read(cpu_registers.pc++);		\
+	core_advance_cpu_clocks(4);						\
 }
 
-static inline void cpu_routine_ld_16(uint8_t &reg_hi, uint8_t &reg_low){
-    core_advance_cpu_clocks(4);
-    reg_low = memory_bus_read(cpu_registers.pc++);
-    core_advance_cpu_clocks(4);
-    reg_hi = memory_bus_read(cpu_registers.pc++);
-    core_advance_cpu_clocks(4);
+#define cpu_routine_ld_16(reg_hi, reg_low)			\
+{													\
+	core_advance_cpu_clocks(4);						\
+	reg_low = memory_bus_read(cpu_registers.pc++);	\
+	core_advance_cpu_clocks(4);						\
+	reg_hi = memory_bus_read(cpu_registers.pc++);	\
+	core_advance_cpu_clocks(4);						\
 }
 
-static inline void cpu_routine_inc_8(uint8_t &reg){
-    uint8_t old = reg;
-    reg++;
-
-    SET_FLAG_ZERO(reg == 0);
-    SET_FLAG_SUBTRACT(0);
-    SET_FLAG_HALF_CARRY((old & 0x0F) == 0x0F);
-
-    core_advance_cpu_clocks(4);
+#define cpu_routine_ld_ptr8(reg16, reg8)			\
+{													\
+	core_advance_cpu_clocks(4);						\
+	memory_bus_write(reg16, reg8);					\
+	core_advance_cpu_clocks(4);						\
 }
 
-static inline void cpu_routine_dec_8(uint8_t &reg){
-    uint8_t old = reg;
-    reg--;
-
-    SET_FLAG_ZERO(reg == 0);
-    SET_FLAG_SUBTRACT(1);
-    SET_FLAG_HALF_CARRY((old & 0x0F) == 0x00);
-
-    core_advance_cpu_clocks(4);
+#define cpu_routine_ld_ptr_16(reg8, reg16)			\
+{													\
+	core_advance_cpu_clocks(4);						\
+	reg8 = memory_bus_read(reg16);					\
+	core_advance_cpu_clocks(4);						\
 }
 
-static inline void cpu_routine_inc_16(uint16_t &reg){
-    reg++;
-    core_advance_cpu_clocks(8);
+#define cpu_routine_inc_16(reg16)					\
+{													\
+	core_advance_cpu_clocks(4);						\
+	reg16 = (reg16 + 1);							\
+	core_advance_cpu_clocks(4);						\
 }
 
-static inline void cpu_routine_dec_16(uint16_t &reg){
-    reg--;
-    core_advance_cpu_clocks(8);
+#define cpu_routine_dec_16(reg16)					\
+{													\
+	core_advance_cpu_clocks(4);						\
+	reg16 = (reg16 - 1);							\
+	core_advance_cpu_clocks(4);						\
 }
 
-static inline void cpu_routine_add_hl(uint16_t value){
-    uint16_t old = cpu_registers.hl;
-    uint32_t result = (uint32_t)old + value;
-
-    SET_FLAG_SUBTRACT(0);
-    SET_FLAG_HALF_CARRY(((old & 0x0FFF) + (value & 0x0FFF)) > 0x0FFF);
-    SET_FLAG_CARRY(result > 0xFFFF);
-
-    cpu_registers.hl = (uint16_t)result;
-
-    core_advance_cpu_clocks(8);
+#define cpu_routine_inc_8(reg8)						\
+{													\
+	SET_FLAG_SUBTRACT(0);							\
+	SET_FLAG_HALF_CARRY((reg8 & 0xF) == 0xF);		\
+	reg8++;											\
+	SET_FLAG_ZERO(reg8 == 0);						\
+	core_advance_cpu_clocks(4);						\
 }
 
-static inline void cpu_routine_add_a(uint8_t value){
-    uint8_t old = cpu_registers.a;
-    uint16_t result = (uint16_t)old + value;
-
-    cpu_registers.a = (uint8_t)result;
-
-    SET_FLAG_ZERO(cpu_registers.a == 0);
-    SET_FLAG_SUBTRACT(0);
-    SET_FLAG_HALF_CARRY(((old & 0x0F) + (value & 0x0F)) > 0x0F);
-    SET_FLAG_CARRY(result > 0xFF);
+#define cpu_routine_dec_8(reg8)						\
+{													\
+	SET_FLAG_SUBTRACT(1);							\
+	SET_FLAG_HALF_CARRY((reg8 & 0xF) == 0x0);		\
+	reg8--;											\
+	SET_FLAG_ZERO(reg8 == 0);						\
+	core_advance_cpu_clocks(4);						\
 }
 
-static inline void cpu_routine_adc_a(uint8_t value){
-    uint8_t old = cpu_registers.a;
-    uint8_t carry = GET_FLAG_CARRY();
-    uint16_t result = (uint16_t)old + value + carry;
-
-    cpu_registers.a = (uint8_t)result;
-
-    SET_FLAG_ZERO(cpu_registers.a == 0);
-    SET_FLAG_SUBTRACT(0);
-    SET_FLAG_HALF_CARRY(((old & 0x0F) + (value & 0x0F) + carry) > 0x0F);
-    SET_FLAG_CARRY(result > 0xFF);
+#define cpu_routine_add_hl_16(reg16)										\
+{																			\
+	SET_FLAG_SUBTRACT(0);													\
+	uint32_t temp = cpu_registers.hl + reg16;								\
+	SET_FLAG_CARRY(temp > 0xFFFF);											\
+	bool hc = ((cpu_registers.hl & 0x0FFF) + (reg16 & 0x0FFF)) > 0x0FFF;	\
+	SET_FLAG_HALF_CARRY(hc);												\
+	core_advance_cpu_clocks(4);												\
+	cpu_registers.hl = temp & 0xFFFF;										\
+	core_advance_cpu_clocks(4);												\
 }
 
-static inline void cpu_routine_sub_a(uint8_t value){
-    uint8_t old = cpu_registers.a;
-
-    cpu_registers.a = old - value;
-
-    SET_FLAG_ZERO(cpu_registers.a == 0);
-    SET_FLAG_SUBTRACT(1);
-    SET_FLAG_HALF_CARRY((old & 0x0F) < (value & 0x0F));
-    SET_FLAG_CARRY(old < value);
+#define cpu_routine_add_a_8(reg8)											\
+{																			\
+	SET_FLAG_SUBTRACT(0);													\
+	uint32_t temp = cpu_registers.a;										\
+	SET_FLAG_HALF_CARRY(((temp & 0xF) + ((uint32_t)reg8 & 0xF)) > 0xF);		\
+	cpu_registers.a += reg8;												\
+	SET_FLAG_ZERO(cpu_registers.a == 0);									\
+	SET_FLAG_CARRY(temp > cpu_registers.a);									\
+	core_advance_cpu_clocks(4);												\
 }
 
-static inline void cpu_routine_sbc_a(uint8_t value){
-    uint8_t old = cpu_registers.a;
-    uint8_t carry = GET_FLAG_CARRY();
-    uint16_t amount = (uint16_t)value + carry;
-
-    cpu_registers.a = old - amount;
-
-    SET_FLAG_ZERO(cpu_registers.a == 0);
-    SET_FLAG_SUBTRACT(1);
-    SET_FLAG_HALF_CARRY((old & 0x0F) < ((value & 0x0F) + carry));
-    SET_FLAG_CARRY(old < amount);
+#define cpu_routine_adc_a_8(reg8)											\
+{																			\
+	SET_FLAG_SUBTRACT(0);													\
+	uint8_t carry = GET_FLAG_CARRY;											\
+	uint32_t temp = cpu_registers.a + reg8 + carry;							\
+	bool hc = (((cpu_registers.a & 0xF) + (reg8 & 0xF)) + carry) > 0xF;		\
+	SET_FLAG_HALF_CARRY(hc);												\
+	SET_FLAG_CARRY(temp > 0xFF);											\
+	temp &= 0xFF;															\
+	cpu_registers.a = temp;													\
+	SET_FLAG_ZERO(temp == 0);												\
+	core_advance_cpu_clocks(4);												\
 }
 
-static inline void cpu_routine_and_a(uint8_t value){
-    cpu_registers.a &= value;
-
-    SET_FLAG_ZERO(cpu_registers.a == 0);
-    SET_FLAG_SUBTRACT(0);
-    SET_FLAG_HALF_CARRY(1);
-    SET_FLAG_CARRY(0);
+#define cpu_routine_sub_a_8(reg8)											\
+{																			\
+	SET_FLAG_SUBTRACT(1);													\
+	SET_FLAG_HALF_CARRY((cpu_registers.a & 0xF) < (reg8 & 0xF));			\
+	SET_FLAG_CARRY((uint32_t)cpu_registers.a < (uint32_t)reg8);				\
+	cpu_registers.a -= reg8;												\
+	SET_FLAG_ZERO(cpu_registers.a == 0);									\
+	core_advance_cpu_clocks(4);												\
 }
 
-static inline void cpu_routine_xor_a(uint8_t value){
-    cpu_registers.a ^= value;
-
-    SET_FLAG_ZERO(cpu_registers.a == 0);
-    SET_FLAG_SUBTRACT(0);
-    SET_FLAG_HALF_CARRY(0);
-    SET_FLAG_CARRY(0);
+#define cpu_routine_sbc_a_8(reg8)											\
+{																			\
+	uint16_t temp = cpu_registers.a - (reg8 + GET_FLAG_CARRY);				\
+	SET_FLAG_SUBTRACT(1);													\
+	SET_FLAG_CARRY((temp & ~0xFF) ? 1 : 0);									\
+	SET_FLAG_ZERO((temp & 0xFF) ? 0 : 1);									\
+	SET_FLAG_HALF_CARRY(((cpu_registers.a ^ reg8 ^ temp) & 0x10) != 0);		\
+	cpu_registers.a = temp;													\
+	core_advance_cpu_clocks(4);												\
 }
 
-static inline void cpu_routine_or_a(uint8_t value){
-    cpu_registers.a |= value;
-
-    SET_FLAG_ZERO(cpu_registers.a == 0);
-    SET_FLAG_SUBTRACT(0);
-    SET_FLAG_HALF_CARRY(0);
-    SET_FLAG_CARRY(0);
+#define cpu_routine_and_a_8(reg8)											\
+{																			\
+	SET_FLAG_HALF_CARRY(1);													\
+	SET_FLAG_SUBTRACT(0);													\
+	SET_FLAG_CARRY(0);														\
+	cpu_registers.a &= reg8;												\
+	SET_FLAG_ZERO(cpu_registers.a == 0);									\
+	core_advance_cpu_clocks(4);												\
 }
 
-static inline void cpu_routine_cp_a(uint8_t value){
-    uint8_t old = cpu_registers.a;
-
-    SET_FLAG_ZERO(old == value);
-    SET_FLAG_SUBTRACT(1);
-    SET_FLAG_HALF_CARRY((old & 0x0F) < (value & 0x0F));
-    SET_FLAG_CARRY(old < value);
+#define cpu_routine_xor_a_8(reg8)											\
+{																			\
+	SET_FLAG_SUBTRACT(0);													\
+	SET_FLAG_CARRY(0);														\
+	SET_FLAG_HALF_CARRY(0);													\
+	cpu_registers.a ^= reg8;												\
+	SET_FLAG_ZERO(cpu_registers.a == 0);									\
+	core_advance_cpu_clocks(4);												\
 }
 
-static inline void cpu_routine_rlca(){
-    uint8_t carry = (cpu_registers.a >> 7) & 1;
-
-    cpu_registers.a = (uint8_t)((cpu_registers.a << 1) | carry);
-
-    SET_FLAG_ZERO(0);
-    SET_FLAG_SUBTRACT(0);
-    SET_FLAG_HALF_CARRY(0);
-    SET_FLAG_CARRY(carry);
-
-    core_advance_cpu_clocks(4);
+#define cpu_routine_or_a_8(reg8)											\
+{																			\
+	SET_FLAG_SUBTRACT(0);													\
+	SET_FLAG_CARRY(0);														\
+	SET_FLAG_HALF_CARRY(0);													\
+	cpu_registers.a |= reg8;												\
+	SET_FLAG_ZERO(cpu_registers.a == 0);									\
+	core_advance_cpu_clocks(4);												\
 }
 
-static inline void cpu_routine_rrca(){
-    uint8_t carry = cpu_registers.a & 1;
-
-    cpu_registers.a = (uint8_t)((cpu_registers.a >> 1) | (carry << 7));
-
-    SET_FLAG_ZERO(0);
-    SET_FLAG_SUBTRACT(0);
-    SET_FLAG_HALF_CARRY(0);
-    SET_FLAG_CARRY(carry);
-
-    core_advance_cpu_clocks(4);
+#define cpu_routine_cp_a_8(reg8)											\
+{																			\
+	SET_FLAG_SUBTRACT(1);													\
+	SET_FLAG_HALF_CARRY((cpu_registers.a & 0xF) < (reg8 & 0xF));			\
+	SET_FLAG_CARRY((uint32_t)cpu_registers.a < (uint32_t)reg8);				\
+	SET_FLAG_ZERO(cpu_registers.a == reg8);									\
+	core_advance_cpu_clocks(4);												\
 }
 
-static inline void cpu_routine_rla(){
-    uint8_t old_carry = GET_FLAG_CARRY();
-    uint8_t carry = (cpu_registers.a >> 7) & 1;
-
-    cpu_registers.a = (uint8_t)((cpu_registers.a << 1) | old_carry);
-
-    SET_FLAG_ZERO(0);
-    SET_FLAG_SUBTRACT(0);
-    SET_FLAG_HALF_CARRY(0);
-    SET_FLAG_CARRY(carry);
-
-    core_advance_cpu_clocks(4);
+#define cpu_routine_rst_nnnn(addr)											\
+{																			\
+	core_advance_cpu_clocks(4);												\
+	cpu_registers.sp--;														\
+	cpu_registers.sp &= 0xFFFF;												\
+	const uint8_t pchi = (cpu_registers.pc & 0xFF00) >> 8;					\
+	core_advance_cpu_clocks(4);												\
+	memory_bus_write(cpu_registers.sp, pchi);								\
+	core_advance_cpu_clocks(4);												\
+	cpu_registers.sp--;														\
+	cpu_registers.sp &= 0xFFFF;												\
+	const uint8_t pclo = cpu_registers.pc & 0xFF;							\
+	memory_bus_write(cpu_registers.sp, pclo);								\
+	cpu_registers.pc = addr;												\
+	core_advance_cpu_clocks(4);												\
 }
 
-static inline void cpu_routine_rra(){
-    uint8_t old_carry = GET_FLAG_CARRY();
-    uint8_t carry = cpu_registers.a & 1;
-
-    cpu_registers.a = (uint8_t)((cpu_registers.a >> 1) | (old_carry << 7));
-
-    SET_FLAG_ZERO(0);
-    SET_FLAG_SUBTRACT(0);
-    SET_FLAG_HALF_CARRY(0);
-    SET_FLAG_CARRY(carry);
-
-    core_advance_cpu_clocks(4);
+#define cpu_routine_push_16(reg_hi, reg_lo)									\
+{																			\
+	core_advance_cpu_clocks(4);												\
+	cpu_registers.sp--;														\
+	cpu_registers.sp &= 0xFFFF;												\
+	core_advance_cpu_clocks(4);												\
+	memory_bus_write(cpu_registers.sp, reg_hi);								\
+	core_advance_cpu_clocks(4);												\
+	cpu_registers.sp--;														\
+	cpu_registers.sp &= 0xFFFF;												\
+	memory_bus_write(cpu_registers.sp, reg_lo);								\
+	core_advance_cpu_clocks(4);												\
 }
 
-static inline void cpu_routine_daa(){
-    uint8_t a = cpu_registers.a;
-    uint8_t correction = 0;
-    uint8_t carry = GET_FLAG_CARRY();
-
-    if (!GET_FLAG_SUBTRACT()){
-        if (carry || a > 0x99){
-            correction |= 0x60;
-            carry = 1;
-        }
-
-        if (GET_FLAG_HALF_CARRY() || (a & 0x0F) > 0x09){
-            correction |= 0x06;
-        }
-
-        a += correction;
-    }
-    else{
-        if (carry){
-            a -= 0x60;
-        }
-
-        if (GET_FLAG_HALF_CARRY()){
-            a -= 0x06;
-        }
-    }
-
-    cpu_registers.a = a;
-
-    SET_FLAG_ZERO(a == 0);
-    SET_FLAG_HALF_CARRY(0);
-    SET_FLAG_CARRY(carry);
-
-    core_advance_cpu_clocks(4);
+#define cpu_routine_pop_16(reg_hi, reg_low)									\
+{																			\
+	core_advance_cpu_clocks(4);												\
+	reg_low = memory_bus_read(cpu_registers.sp++);							\
+	cpu_registers.sp &= 0xFFFF;												\
+	core_advance_cpu_clocks(4);												\
+	reg_hi = memory_bus_read(cpu_registers.sp++);							\
+	cpu_registers.sp &= 0xFFFF;												\
+	core_advance_cpu_clocks(4);												\
 }
 
-static inline void cpu_routine_add_sp_r8(){
-    uint16_t old = cpu_registers.sp;
-    int8_t value = (int8_t)memory_bus_read(cpu_registers.pc++);
-
-    uint16_t result = (uint16_t)(old + value);
-
-    SET_FLAG_ZERO(0);
-    SET_FLAG_SUBTRACT(0);
-    SET_FLAG_HALF_CARRY(((old & 0x0F) + ((uint16_t)value & 0x0F)) > 0x0F);
-    SET_FLAG_CARRY(((old & 0xFF) + ((uint16_t)value & 0xFF)) > 0xFF);
-
-    cpu_registers.sp = result;
+#define cpu_routine_call_conditional_nnnn(cond)								\
+{																			\
+	core_advance_cpu_clocks(4);												\
+	if (cond)																\
+	{																		\
+		uint32_t temp = memory_bus_read(cpu_registers.pc++);				\
+		core_advance_cpu_clocks(4);											\
+		temp |= ((uint32_t)memory_bus_read(cpu_registers.pc++)) << 8;		\
+		core_advance_cpu_clocks(4);											\
+		cpu_registers.sp--;													\
+		cpu_registers.sp &= 0xFFFF;											\
+		const uint8_t pchi = (cpu_registers.pc & 0xFF00) >> 8;				\
+		core_advance_cpu_clocks(4);											\
+		memory_bus_write(cpu_registers.sp, pchi);							\
+		core_advance_cpu_clocks(4);											\
+		cpu_registers.sp--;													\
+		cpu_registers.sp &= 0xFFFF;											\
+		const uint8_t pclo = (cpu_registers.pc & 0xFF);						\
+		memory_bus_write(cpu_registers.sp, pclo);							\
+		cpu_registers.pc = temp;											\
+		core_advance_cpu_clocks(4);											\
+	}																		\
+	else																	\
+	{																		\
+		cpu_registers.pc++;													\
+		core_advance_cpu_clocks(4);											\
+		cpu_registers.pc++;													\
+		core_advance_cpu_clocks(4);											\
+		cpu_registers.pc &= 0xFFFF;											\
+	}																		\
 }
 
-static inline void cpu_routine_push_16(uint16_t value){
-    core_advance_cpu_clocks(4);
-    core_advance_cpu_clocks(4);
-
-    cpu_registers.sp--;
-    memory_bus_write(cpu_registers.sp, (uint8_t)(value >> 8));
-
-    core_advance_cpu_clocks(4);
-
-    cpu_registers.sp--;
-    memory_bus_write(cpu_registers.sp, (uint8_t)(value & 0xFF));
-
-    core_advance_cpu_clocks(4);
+#define cpu_routine_ret_conditional(cond)									\
+{																			\
+	core_advance_cpu_clocks(4);												\
+	if (cond)																\
+	{																		\
+		uint32_t temp = memory_bus_read(cpu_registers.sp++);				\
+		cpu_registers.sp &= 0xFFFF;											\
+		core_advance_cpu_clocks(4);											\
+		temp |= ((uint32_t)memory_bus_read(cpu_registers.sp++))	<< 8;		\
+		cpu_registers.sp &= 0xFFFF;											\
+		core_advance_cpu_clocks(4);											\
+		cpu_registers.pc = temp;											\
+		core_advance_cpu_clocks(4);											\
+		core_advance_cpu_clocks(4);											\
+	}																		\
+	else																	\
+	{																		\
+		core_advance_cpu_clocks(4);											\
+	}																		\
 }
 
-static inline uint16_t cpu_routine_pop_16(){
-    core_advance_cpu_clocks(4);
-    uint8_t low = memory_bus_read(cpu_registers.sp++);
-
-    core_advance_cpu_clocks(4);
-    uint8_t high = memory_bus_read(cpu_registers.sp++);
-
-    core_advance_cpu_clocks(4);
-
-    return (uint16_t)(low | ((uint16_t)high << 8));
+#define cpu_routine_jp_conditional_nnnn(cond)								\
+{																			\
+	core_advance_cpu_clocks(4);												\
+	if (cond)																\
+	{																		\
+		uint32_t temp = memory_bus_read(cpu_registers.pc++);				\
+		core_advance_cpu_clocks(4);											\
+		temp |= ((uint32_t)memory_bus_read(cpu_registers.pc++)) << 8;		\
+		core_advance_cpu_clocks(4);											\
+		cpu_registers.pc = temp;											\
+		core_advance_cpu_clocks(4);											\
+	}																		\
+	else																	\
+	{																		\
+		cpu_registers.pc++;													\
+		core_advance_cpu_clocks(4);											\
+		cpu_registers.pc++;													\
+		core_advance_cpu_clocks(4);											\
+	}																		\
 }
 
-static inline uint16_t cpu_routine_read_nn(){
-    core_advance_cpu_clocks(4);
-    uint8_t low = memory_bus_read(cpu_registers.pc++);
-
-    core_advance_cpu_clocks(4);
-    uint8_t high = memory_bus_read(cpu_registers.pc++);
-
-    core_advance_cpu_clocks(4);
-
-    return (uint16_t)(low | ((uint16_t)high << 8));
+#define cpu_routine_jr_conditional_n(cond)									\
+{																			\
+	core_advance_cpu_clocks(4);												\
+	if (cond)																\
+	{																		\
+		uint8_t temp = memory_bus_read(cpu_registers.pc++);					\
+		core_advance_cpu_clocks(4);											\
+		cpu_registers.pc = (cpu_registers.pc + (int8_t)temp) & 0xFFFF;		\
+		core_advance_cpu_clocks(4);											\
+	}																		\
+	else																	\
+	{																		\
+		cpu_registers.pc++;													\
+		core_advance_cpu_clocks(4);											\
+	}																		\
 }
 
-static inline void cpu_routine_ld_mem_nn_a(){
-    uint16_t address = cpu_routine_read_nn();
-
-    memory_bus_write(address, cpu_registers.a);
-    core_advance_cpu_clocks(4);
+#define cpu_routine_rlc_8(reg8)												\
+{																			\
+	SET_FLAG_SUBTRACT(0);													\
+	SET_FLAG_HALF_CARRY(0);													\
+	SET_FLAG_CARRY(((reg8 & 0x80) != 0));									\
+	core_advance_cpu_clocks(4);												\
+	reg8 = (reg8 << 1) | GET_FLAG_CARRY;									\
+	SET_FLAG_ZERO(reg8 == 0);												\
 }
 
-static inline void cpu_routine_ld_nn_sp(){
-    uint16_t address = cpu_routine_read_nn();
-
-    core_advance_cpu_clocks(4);
-    memory_bus_write(address, cpu_registers.p);
-
-    core_advance_cpu_clocks(4);
-    memory_bus_write(address + 1, cpu_registers.s);
+#define cpu_routine_rrc_8(reg8)												\
+{																			\
+	SET_FLAG_SUBTRACT(0);													\
+	SET_FLAG_HALF_CARRY(0);													\
+	SET_FLAG_CARRY((reg8 & 0x01) != 0);										\
+	core_advance_cpu_clocks(4);												\
+	reg8 = (reg8 >> 1) | (GET_FLAG_CARRY << 7);								\
+	SET_FLAG_ZERO(reg8 == 0);												\
 }
 
-static inline void cpu_routine_cb_rlc(uint8_t &reg){
-    uint8_t carry = (reg >> 7) & 1;
-    reg = (uint8_t)((reg << 1) | carry);
-
-    SET_FLAG_ZERO(reg == 0);
-    SET_FLAG_SUBTRACT(0);
-    SET_FLAG_HALF_CARRY(0);
-    SET_FLAG_CARRY(carry);
+#define cpu_routine_rl_8(reg8)												\
+{																			\
+	SET_FLAG_SUBTRACT(0);													\
+	SET_FLAG_HALF_CARRY(0);													\
+	uint32_t temp = GET_FLAG_CARRY;											\
+	SET_FLAG_CARRY((reg8 & 0x80) != 0);										\
+	core_advance_cpu_clocks(4);												\
+	reg8 = (reg8 << 1) | temp;												\
+	SET_FLAG_ZERO(reg8 == 0);												\
 }
 
-static inline void cpu_routine_cb_rrc(uint8_t &reg){
-    uint8_t carry = reg & 1;
-    reg = (uint8_t)((reg >> 1) | (carry << 7));
-
-    SET_FLAG_ZERO(reg == 0);
-    SET_FLAG_SUBTRACT(0);
-    SET_FLAG_HALF_CARRY(0);
-    SET_FLAG_CARRY(carry);
+#define cpu_routine_rr_8(reg8)												\
+{																			\
+	SET_FLAG_SUBTRACT(0);													\
+	SET_FLAG_HALF_CARRY(0);													\
+	uint32_t temp = GET_FLAG_CARRY;											\
+	SET_FLAG_CARRY((reg8 & 0x01) != 0);										\
+	core_advance_cpu_clocks(4);												\
+	reg8 = (reg8 >> 1) | (temp << 7);										\
+	SET_FLAG_ZERO(reg8 == 0);												\
 }
 
-static inline void cpu_routine_cb_rl(uint8_t &reg){
-    uint8_t old_carry = GET_FLAG_CARRY();
-    uint8_t carry = (reg >> 7) & 1;
-
-    reg = (uint8_t)((reg << 1) | old_carry);
-
-    SET_FLAG_ZERO(reg == 0);
-    SET_FLAG_SUBTRACT(0);
-    SET_FLAG_HALF_CARRY(0);
-    SET_FLAG_CARRY(carry);
+#define cpu_routine_sla_8(reg8)												\
+{																			\
+	SET_FLAG_SUBTRACT(0);													\
+	SET_FLAG_HALF_CARRY(0);													\
+	SET_FLAG_CARRY((reg8 & 0x80) != 0);										\
+	core_advance_cpu_clocks(4);												\
+	reg8 = reg8 << 1;														\
+	SET_FLAG_ZERO(reg8 == 0);												\
 }
 
-static inline void cpu_routine_cb_rr(uint8_t &reg){
-    uint8_t old_carry = GET_FLAG_CARRY();
-    uint8_t carry = reg & 1;
-
-    reg = (uint8_t)((reg >> 1) | (old_carry << 7));
-
-    SET_FLAG_ZERO(reg == 0);
-    SET_FLAG_SUBTRACT(0);
-    SET_FLAG_HALF_CARRY(0);
-    SET_FLAG_CARRY(carry);
+#define cpu_routine_sra_8(reg8)												\
+{																			\
+	SET_FLAG_SUBTRACT(0);													\
+	SET_FLAG_HALF_CARRY(0);													\
+	SET_FLAG_CARRY((reg8 & 0x01) != 0);										\
+	core_advance_cpu_clocks(4);												\
+	reg8 = (reg8 & 0x80) | (reg8 >> 1);										\
+	SET_FLAG_ZERO(reg8 == 0);												\
 }
 
-static inline void cpu_routine_cb_sla(uint8_t &reg){
-    uint8_t carry = (reg >> 7) & 1;
-
-    reg = (uint8_t)(reg << 1);
-
-    SET_FLAG_ZERO(reg == 0);
-    SET_FLAG_SUBTRACT(0);
-    SET_FLAG_HALF_CARRY(0);
-    SET_FLAG_CARRY(carry);
+#define cpu_routine_swap_8(reg8)											\
+{																			\
+	SET_FLAG_SUBTRACT(0);													\
+	SET_FLAG_HALF_CARRY(0);													\
+	SET_FLAG_CARRY(0);														\
+	core_advance_cpu_clocks(4);												\
+	reg8 = ((reg8 >> 4) | (reg8 << 4));										\
+	SET_FLAG_ZERO(reg8 == 0);												\
 }
 
-static inline void cpu_routine_cb_sra(uint8_t &reg){
-    uint8_t carry = reg & 1;
-    uint8_t bit7 = reg & 0x80;
-
-    reg = (uint8_t)((reg >> 1) | bit7);
-
-    SET_FLAG_ZERO(reg == 0);
-    SET_FLAG_SUBTRACT(0);
-    SET_FLAG_HALF_CARRY(0);
-    SET_FLAG_CARRY(carry);
+#define cpu_routine_srl_8(reg8)												\
+{																			\
+	SET_FLAG_SUBTRACT(0);													\
+	SET_FLAG_HALF_CARRY(0);													\
+	SET_FLAG_CARRY((reg8 & 0x01) != 0);										\
+	core_advance_cpu_clocks(4);												\
+	reg8 = reg8 >> 1;														\
+	SET_FLAG_ZERO(reg8 == 0);												\
 }
 
-static inline void cpu_routine_cb_swap(uint8_t &reg){
-    reg = (uint8_t)((reg << 4) | (reg >> 4));
-
-    SET_FLAG_ZERO(reg == 0);
-    SET_FLAG_SUBTRACT(0);
-    SET_FLAG_HALF_CARRY(0);
-    SET_FLAG_CARRY(0);
+#define cpu_routine_bit_n_8(bitn, reg8)										\
+{																			\
+	core_advance_cpu_clocks(4);												\
+	SET_FLAG_SUBTRACT(0);													\
+	SET_FLAG_HALF_CARRY(1);													\
+	SET_FLAG_ZERO((reg8 & (1 << bitn)) == 0);								\
 }
 
-static inline void cpu_routine_cb_srl(uint8_t &reg){
-    uint8_t carry = reg & 1;
-
-    reg >>= 1;
-
-    SET_FLAG_ZERO(reg == 0);
-    SET_FLAG_SUBTRACT(0);
-    SET_FLAG_HALF_CARRY(0);
-    SET_FLAG_CARRY(carry);
+#define cpu_routine_bit_n_ptr_hl(bitn)										\
+{																			\
+	core_advance_cpu_clocks(4);												\
+	SET_FLAG_SUBTRACT(0);													\
+	SET_FLAG_HALF_CARRY(1);													\
+	core_advance_cpu_clocks(4);												\
+	SET_FLAG_ZERO((memory_bus_read(cpu_registers.hl) & (1 << bitn)) == 0);	\
 }
 
-static inline void cpu_routine_cb_bit(uint8_t value, uint8_t bit){
-    SET_FLAG_ZERO((value & (1u << bit)) == 0);
-    SET_FLAG_SUBTRACT(0);
-    SET_FLAG_HALF_CARRY(1);
+#define cpu_routine_res_n_8(bitn, reg8)										\
+{																			\
+	core_advance_cpu_clocks(4);												\
+	reg8 &= ~(1 << bitn);													\
 }
 
-static inline void cpu_routine_cb_res(uint8_t &reg, uint8_t bit){
-    reg &= (uint8_t)~(1u << bit);
+#define cpu_routine_res_n_ptr_hl(bitn)										\
+{																			\
+	core_advance_cpu_clocks(4);												\
+	uint8_t temp = memory_bus_read(cpu_registers.hl);						\
+	core_advance_cpu_clocks(4);												\
+	memory_bus_write(cpu_registers.hl, temp &(~(1 << bitn)));				\
+	core_advance_cpu_clocks(4);												\
 }
 
-static inline void cpu_routine_cb_set(uint8_t &reg, uint8_t bit){
-    reg |= (uint8_t)(1u << bit);
+#define cpu_routine_set_n_8(bitn, reg8)										\
+{																			\
+	core_advance_cpu_clocks(4);												\
+	reg8 |= (1 << bitn);													\
+}
+
+#define cpu_routine_set_n_ptr_hl(bitn)										\
+{																			\
+	core_advance_cpu_clocks(4);												\
+	uint32_t temp = memory_bus_read(cpu_registers.hl);						\
+	core_advance_cpu_clocks(4);												\
+	memory_bus_write(cpu_registers.hl, temp | (1 << bitn));					\
+	core_advance_cpu_clocks(4);												\
 }

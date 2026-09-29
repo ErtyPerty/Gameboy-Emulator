@@ -1,28 +1,30 @@
 #pragma once
-#include <stdint.h>
 
-/*Define the max size allowed for any cartridge. 1024 * 1024 = 8mb of max size*/
+#include <stdint.h>
+#include <stddef.h>
+
 const int MAX_CART_SIZE = 1024 * 1024;
+
 extern uint8_t cartridge_data[MAX_CART_SIZE];
 extern bool cartridge_loaded;
+extern size_t cartridge_size;
 
-/*Every game contains a header with info about the game. This struct contains all the enteries in the header*/
 struct cart_header_struct {
-    uint8_t entry_point[4];
-    uint8_t nintendo_logo[48];
-    uint8_t title[15];
-    uint8_t cbg_flag;
-    uint8_t new_licensee_code[2];
-    uint8_t sgb_flag;
-    uint8_t cartridge_type;
-    uint8_t rom_size;
-    uint8_t ram_size;
-    uint8_t destination_code;
-    uint8_t old_licensee_code;
-    uint8_t mask_rom_version_number;
-    uint8_t header_checksum;
-    uint8_t global_checksum_hi;
-    uint8_t global_checksum_lo;
+	uint8_t entry_point[4];
+	uint8_t nintendo_logo[48];
+	uint8_t title[15];
+	uint8_t cbg_flag;
+	uint8_t new_licensee_code[2];
+	uint8_t sgb_flag;
+	uint8_t cartridge_type;
+	uint8_t rom_size;
+	uint8_t ram_size;
+	uint8_t destination_code;
+	uint8_t old_licensee_code;
+	uint8_t mask_rom_version_number;
+	uint8_t header_checksum;
+	uint8_t global_checksum_hi;
+	uint8_t global_checksum_lo;
 };
 
 extern cart_header_struct* cartridge_header;
